@@ -1,0 +1,42 @@
+# Docker Compose for LobeChat with MCP Configuration
+# This file demonstrates how to mount an mcp.json file for pre-configured MCP servers
+
+services:
+  lobe-chat:
+    build: .
+    # Or use: image: redaphid/lobe-chat:latest
+    container_name: lobe-chat
+    ports:
+      - "3080:3210"
+    volumes:
+      # Mount your mcp.json configuration file
+      # This follows Claude Code's .mcp.json format
+      - ./config/mcp.json:/app/config/mcp.json:ro
+    environment:
+      # Ollama configuration (adjust host.docker.internal for your setup)
+      - OLLAMA_PROXY_URL=http://host.docker.internal:11434
+
+      # Disable cloud auth prompts
+      - NEXT_PUBLIC_ENABLE_CLERK_AUTH=false
+
+      # Optional: Set an access code
+      # - ACCESS_CODE=your-password
+
+      # MCP config path (default, can override)
+      - MCP_CONFIG_PATH=/app/config/mcp.json
+    restart: unless-stopped
+
+# Example: Add this to your config/mcp.json file
+# {
+#   "mcpServers": {
+#     "claude-mcp": {
+#       "type": "http",
+#       "url": "http://host.docker.internal:5152/mcp"
+#     },
+#     "filesystem": {
+#       "type": "stdio",
+#       "command": "npx",
+#       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data"]
+#     }
+#   }
+# }

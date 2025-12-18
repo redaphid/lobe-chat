@@ -7,11 +7,12 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { ToolCallContent } from '@/libs/mcp';
-import { authedProcedure, router } from '@/libs/trpc/lambda';
+import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileService } from '@/server/services/file';
 import { mcpService } from '@/server/services/mcp';
 import { processContentBlocks } from '@/server/services/mcp/contentProcessor';
+import { getPreConfiguredMcpServers } from '@/server/services/mcpConfig';
 
 // Define Zod schemas for MCP Client parameters
 const httpParamsSchema = z.object({
@@ -122,4 +123,9 @@ export const mcpRouter = router({
         processContentBlocks: boundProcessContentBlocks,
       });
     }),
+
+  // Get pre-configured MCP servers from mounted config file
+  getPreConfiguredServers: publicProcedure.query(async () => {
+    return getPreConfiguredMcpServers();
+  }),
 });

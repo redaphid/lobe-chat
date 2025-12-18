@@ -133,6 +133,8 @@ RUN <<'EOF'
 set -e
 addgroup -S -g 1001 nodejs
 adduser -D -G nodejs -H -S -h /app -u 1001 nextjs
+# Create config directory for MCP configuration mount
+mkdir -p /app/config
 chown -R nextjs:nodejs /app /etc/proxychains4.conf
 EOF
 
@@ -164,7 +166,9 @@ ENV ACCESS_CODE="" \
     SYSTEM_AGENT="" \
     FEATURE_FLAGS="" \
     PROXY_URL="" \
-    ENABLE_AUTH_PROTECTION=""
+    ENABLE_AUTH_PROTECTION="" \
+    # MCP Configuration - mount your mcp.json to /app/config/mcp.json
+    MCP_CONFIG_PATH="/app/config/mcp.json"
 
 # Database
 ENV KEY_VAULTS_SECRET="" \

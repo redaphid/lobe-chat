@@ -2,7 +2,7 @@
 
 import { enableNextAuth } from '@lobechat/const';
 import { useRouter } from 'next/navigation';
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createStoreUpdater } from 'zustand-utils';
 
@@ -14,6 +14,7 @@ import { electronSyncSelectors } from '@/store/electron/selectors';
 import { useGlobalStore } from '@/store/global';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
+import { useToolStore } from '@/store/tool';
 import { useUrlHydrationStore } from '@/store/urlHydration';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -84,6 +85,15 @@ const StoreInitialization = memo(() => {
   const mobile = useIsMobile();
 
   useStoreUpdater('isMobile', mobile);
+
+  // Initialize pre-configured MCP servers from mounted config file
+  const initPreConfiguredMcpServers = useToolStore((s) => s.initPreConfiguredMcpServers);
+  useEffect(() => {
+    // Only initialize if user is logged in (to ensure plugin storage is ready)
+    if (isLoginOnInit) {
+      initPreConfiguredMcpServers();
+    }
+  }, [isLoginOnInit, initPreConfiguredMcpServers]);
 
   return null;
 });

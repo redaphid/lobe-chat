@@ -4,7 +4,7 @@ import { merge } from 'lodash-es';
 import { StateCreator } from 'zustand/vanilla';
 
 import { notification } from '@/components/AntdStaticMethods';
-import { mcpService } from '@/services/mcp';
+import { mcpService, PreConfiguredMcpServer } from '@/services/mcp';
 import { pluginService } from '@/services/plugin';
 import { toolService } from '@/services/tool';
 import { pluginHelpers } from '@/store/tool/helpers';
@@ -17,7 +17,11 @@ import { defaultCustomPlugin } from './initialState';
 
 const n = setNamespace('customPlugin');
 
+// Track if pre-configured servers have been initialized
+let preConfiguredServersInitialized = false;
+
 export interface CustomPluginAction {
+  initPreConfiguredMcpServers: () => Promise<void>;
   installCustomPlugin: (value: LobeToolCustomPlugin) => Promise<void>;
   reinstallCustomPlugin: (id: string) => Promise<void>;
   uninstallCustomPlugin: (id: string) => Promise<void>;
@@ -25,12 +29,86 @@ export interface CustomPluginAction {
   updateNewCustomPlugin: (value: Partial<LobeToolCustomPlugin>) => void;
 }
 
+/**
+ * Convert a pre-configured MCP server to LobeToolCustomPlugin format
+ */
+const convertToCustomPlugin = (server: PreConfiguredMcpServer): LobeToolCustomPlugin => {
+  if (server.type === 'http') {
+    return {
+      customParams: {
+        mcp: {
+          auth: server.auth,
+          headers: server.headers,
+          type: 'http',
+          url: server.url,
+        },
+      },
+      identifier: server.identifier,
+      type: 'customPlugin',
+    };
+  } else {
+    return {
+      customParams: {
+        mcp: {
+          args: server.args,
+          command: server.command,
+          env: server.env,
+          type: 'stdio',
+        },
+      },
+      identifier: server.identifier,
+      type: 'customPlugin',
+    };
+  }
+};
+
 export const createCustomPluginSlice: StateCreator<
   ToolStore,
   [['zustand/devtools', never]],
   [],
   CustomPluginAction
 > = (set, get) => ({
+  /**
+   * Initialize pre-configured MCP servers from the mounted config file.
+   * This should be called on app startup to auto-install servers.
+   */
+  initPreConfiguredMcpServers: async () => {
+    // Only initialize once per session
+    if (preConfiguredServersInitialized) return;
+    preConfiguredServersInitialized = true;
+
+    try {
+      const preConfiguredServers = await mcpService.getPreConfiguredServers();
+
+      if (preConfiguredServers.length === 0) return;
+
+      console.log(
+        `[MCP Config] Found ${preConfiguredServers.length} pre-configured MCP servers`,
+      );
+
+      const { installCustomPlugin, refreshPlugins } = get();
+
+      // Get currently installed plugins
+      const installedPlugins = pluginSelectors.installedPlugins(get());
+      const installedIds = new Set(installedPlugins.map((p) => p.identifier));
+
+      // Install any servers that aren't already installed
+      for (const server of preConfiguredServers) {
+        if (!installedIds.has(server.identifier)) {
+          console.log(`[MCP Config] Auto-installing MCP server: ${server.identifier}`);
+          const plugin = convertToCustomPlugin(server);
+          await installCustomPlugin(plugin);
+        } else {
+          console.log(`[MCP Config] MCP server already installed: ${server.identifier}`);
+        }
+      }
+
+      await refreshPlugins();
+    } catch (error) {
+      console.error('[MCP Config] Failed to initialize pre-configured MCP servers:', error);
+    }
+  },
+
   installCustomPlugin: async (value) => {
     await pluginService.createCustomPlugin(value);
 

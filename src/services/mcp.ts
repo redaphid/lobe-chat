@@ -10,6 +10,25 @@ import { desktopClient, lambdaClient, toolsClient } from '@/libs/trpc/client';
 import { discoverService } from './discover';
 
 /**
+ * Pre-configured MCP server from mounted config file
+ */
+export interface PreConfiguredMcpServer {
+  auth?: {
+    token?: string;
+    type: 'none' | 'bearer';
+  };
+  headers?: Record<string, string>;
+  identifier: string;
+  type: 'http' | 'stdio';
+  // stdio fields
+  args?: string[];
+  command?: string;
+  env?: Record<string, string>;
+  // http fields
+  url?: string;
+}
+
+/**
  * Calculate byte size of object
  * @param obj Object to calculate size of
  * @returns Byte size
@@ -229,6 +248,19 @@ class MCPService {
       { deploymentOptions: manifest.deploymentOptions as any },
       { signal },
     );
+  }
+
+  /**
+   * Get pre-configured MCP servers from the server's mounted config file
+   * These are servers defined in /app/config/mcp.json or MCP_CONFIG_PATH
+   */
+  async getPreConfiguredServers(): Promise<PreConfiguredMcpServer[]> {
+    try {
+      return await toolsClient.mcp.getPreConfiguredServers.query();
+    } catch (error) {
+      console.warn('Failed to fetch pre-configured MCP servers:', error);
+      return [];
+    }
   }
 }
 
