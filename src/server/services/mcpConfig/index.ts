@@ -1,7 +1,6 @@
+import debug from 'debug';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-import debug from 'debug';
 
 const log = debug('lobe-mcp:config');
 
@@ -25,17 +24,17 @@ export interface McpConfigFile {
  * Parsed MCP server ready for LobeChat
  */
 export interface ParsedMcpServer {
+  // stdio fields
+  args?: string[];
   auth?: {
     token?: string;
     type: 'none' | 'bearer';
   };
+  command?: string;
+  env?: Record<string, string>;
   headers?: Record<string, string>;
   identifier: string;
   type: 'http' | 'stdio';
-  // stdio fields
-  args?: string[];
-  command?: string;
-  env?: Record<string, string>;
   // http fields
   url?: string;
 }
@@ -58,7 +57,7 @@ let cachedConfig: ParsedMcpServer[] | null = null;
  * Supports ${VAR} and ${VAR:-default} syntax
  */
 function expandEnvVars(value: string): string {
-  return value.replace(/\$\{(\w+)(?::-([^}]*))?\}/g, (_, varName, defaultValue) => {
+  return value.replaceAll(/\${(\w+)(?::-([^}]*))?}/g, (_, varName, defaultValue) => {
     return process.env[varName] ?? defaultValue ?? '';
   });
 }
@@ -97,7 +96,7 @@ export function loadMcpConfig(): ParsedMcpServer[] {
     if (existsSync(configPath)) {
       try {
         log('Loading MCP config from: %s', configPath);
-        const content = readFileSync(configPath, 'utf-8');
+        const content = readFileSync(configPath, 'utf8');
         const config = JSON.parse(content) as McpConfigFile;
 
         if (!config.mcpServers || typeof config.mcpServers !== 'object') {
@@ -115,7 +114,7 @@ export function loadMcpConfig(): ParsedMcpServer[] {
             servers.push({
               auth: expandedConfig.headers?.Authorization
                 ? {
-                    token: expandedConfig.headers.Authorization.replace(/^Bearer\s+/i, ''),
+                    token: expandedConfig.headers.Authorization.replace(/^bearer\s+/i, ''),
                     type: 'bearer',
                   }
                 : { type: 'none' },

@@ -103,6 +103,7 @@ vertex-ai-key.json
 .local/
 .claude/
 .mcp.json
+mcp.json
 CLAUDE.local.md
 .agent/
 

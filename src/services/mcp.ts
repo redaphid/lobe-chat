@@ -13,17 +13,17 @@ import { discoverService } from './discover';
  * Pre-configured MCP server from mounted config file
  */
 export interface PreConfiguredMcpServer {
+  // stdio fields
+  args?: string[];
   auth?: {
     token?: string;
     type: 'none' | 'bearer';
   };
+  command?: string;
+  env?: Record<string, string>;
   headers?: Record<string, string>;
   identifier: string;
   type: 'http' | 'stdio';
-  // stdio fields
-  args?: string[];
-  command?: string;
-  env?: Record<string, string>;
   // http fields
   url?: string;
 }

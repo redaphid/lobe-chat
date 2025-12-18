@@ -100,3 +100,91 @@ When working with Linear issues:
 ## Rules Index
 
 Some useful project rules are listed in @.cursor/rules/rules-index.mdc
+
+---
+
+## MCP Config File Support
+
+This fork adds support for pre-configured MCP (Model Context Protocol) servers via a mounted configuration file, using the same `.mcp.json` format as Claude Code.
+
+### Configuration File Format
+
+The config file uses Claude Code's `.mcp.json` format:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "type": "http",
+      "url": "http://host.docker.internal:5152/mcp"
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data"]
+    }
+  }
+}
+```
+
+### Supported Server Types
+
+1. **HTTP/Streamable HTTP** - For remote MCP servers
+
+   ```json
+   {
+     "headers": {
+       "Authorization": "Bearer token"
+     },
+     "type": "http",
+     "url": "http://localhost:5152/mcp"
+   }
+   ```
+
+2. **STDIO** - For local command-based servers
+   ```json
+   {
+     "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data"],
+     "command": "npx",
+     "env": {
+       "SOME_VAR": "value"
+     },
+     "type": "stdio"
+   }
+   ```
+
+### Environment Variable Expansion
+
+The config supports environment variable expansion:
+
+- `${VAR}` - Expands to the value of VAR
+- `${VAR:-default}` - Expands to VAR or "default" if not set
+
+### Config File Search Paths
+
+1. `$MCP_CONFIG_PATH` (env var)
+2. `/app/config/mcp.json` (Docker mount point)
+3. `/app/mcp.json`
+4. `./mcp.json`
+5. `./.mcp.json`
+
+### Docker Deployment
+
+```yaml
+services:
+  lobe-chat:
+    image: lobehub/lobe-chat
+    ports:
+      - '3080:3210'
+    volumes:
+      - ./mcp.json:/app/config/mcp.json:ro
+    environment:
+      - OLLAMA_PROXY_URL=http://host.docker.internal:11434
+```
+
+### Testing MCP Config
+
+```bash
+# Set debug logging
+DEBUG=lobe-mcp:* pnpm dev
+```
